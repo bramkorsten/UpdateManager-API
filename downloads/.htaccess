@@ -1,0 +1,6 @@
+RewriteEngine on
+RewriteBase /api/downloads/
+
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteCond %{REQUEST_URI} !^download.php.*$
+RewriteRule ^(.*)$ ../classes/download.php?file=$1 [QSA,L]
