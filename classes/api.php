@@ -270,6 +270,10 @@ class Endpoint
               $managerExtention->createNewInstance();
               break;
 
+            case 'deleteInstance':
+              $managerExtention->deleteInstance();
+              break;
+
             default:
               $this->response['error'] = 'bad_request';
               $this->response['message'] = 'Not a valid endpoint';

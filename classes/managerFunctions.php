@@ -86,6 +86,40 @@ class ManagerFunctions
 
   }
 
+
+  public function deleteInstance()
+  {
+    $host = $this->databaseDetails['host'];
+    $db = $this->databaseDetails['db'];
+    $user = $this->databaseDetails['username'];
+    $pass = $this->databaseDetails['password'];
+
+    $db = new PDO("mysql:host={$host};dbname={$db}", $user, $pass);
+    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    try {
+      $response = array();
+      $stmt = $db->prepare("DELETE FROM `instances` WHERE `id` = :instanceId");
+      if($stmt->execute(array('instanceId' => $_POST['instanceId']))) {
+        $response['error'] = 0;
+        $response['message'] = 'Instance deleted';
+      } else {
+        $response['error'] = 1;
+        $response['message'] = 'Something went wrong while deleting an instance';
+      }
+      header('Content-Type: application/json');
+      echo(json_encode($response, true));
+      die();
+    } catch (\PDOException $e) {
+      $response['error'] = 1;
+      $response['message'] = 'PDO Exeption: ' . $e->getMessage();
+      header('Content-Type: application/json');
+      echo(json_encode($response, true));
+    }
+
+    die();
+
+  }
+
   public function getModules()
   {
     $host = $this->databaseDetails['host'];
@@ -134,14 +168,33 @@ class ManagerFunctions
         'domain' => $_POST['domain'],
         'clientId' => $_POST['client'],
         'authToken' => $token,
-        'active' => '1',
+        'active' => '0',
         'modules' => '',
-        'whitelisted' => ''
+        'requireWhitelist' => '',
+        'whitelisted' => '',
+        'hasExpirationDate' => '',
+        'expirationDate' => ''
       );
+
+      if (isset($_POST['enabled'])) {
+        if (($_POST['enabled']) == "on") {
+          $instance['active'] = '1';
+        } else {
+          $instance['active'] = '0';
+        }
+      }
 
       if (isset($_POST['modules'])) {
         $moduleString = implode(",", $_POST['modules']);
         $instance['modules'] = $moduleString;
+      }
+
+      if (isset($_POST['require_whitelist'])) {
+        if (($_POST['require_whitelist']) == "on") {
+          $instance['requireWhitelist'] = '1';
+        } else {
+          $instance['requireWhitelist'] = '0';
+        }
       }
 
       if (isset($_POST['whitelisted'])) {
@@ -149,11 +202,27 @@ class ManagerFunctions
         $instance['whitelisted'] = $moduleString;
       }
 
+      if (isset($_POST['has_expiration_date'])) {
+        if (($_POST['has_expiration_date']) == "on") {
+          $instance['hasExpirationDate'] = '1';
+          if (isset($_POST['expiration_date'])) {
+            if (($_POST['expiration_date']) != "") {
+              $timestamp = strtotime($_POST['expiration_date']);
+              $instance['expirationDate'] = date("Y-m-d H:i:s", $timestamp);
+            } else {
+              $instance['expirationDate'] = '';
+            }
+          }
+        } else {
+          $instance['hasExpirationDate'] = '0';
+        }
+      }
+
 
       $db = new PDO("mysql:host={$host};dbname={$databaseName}", $user, $pass);
       $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-      $stmt = $db->prepare("INSERT INTO `instances` (`name`, `client_id`, `auth_token`, `modules`, `active`, `domain`, `whitelisted_ip`) VALUES (:name, :clientId, :authToken, :modules, :active, :domain, :whitelisted)");
-      //$stmt->execute($instance);
+      $stmt = $db->prepare("INSERT INTO `instances` (`name`, `client_id`, `auth_token`, `modules`, `active`, `domain`, `require_whitelist`, `whitelisted_ip`, `will_expire`, `expires_on`) VALUES (:name, :clientId, :authToken, :modules, :active, :domain, :requireWhitelist, :whitelisted, :hasExpirationDate, :expirationDate)");
+      $stmt->execute($instance);
 
       $response['error'] = 0;
       $response['message'] = 'Succesfully created instance';
@@ -163,6 +232,7 @@ class ManagerFunctions
     else {
       $response['error'] = 1;
       $response['message'] = 'Not all fields are set!';
+      $response['instance'] = $instance;
     }
     echo(\json_encode($response));
   }
