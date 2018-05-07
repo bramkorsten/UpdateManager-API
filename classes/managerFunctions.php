@@ -245,7 +245,7 @@ class ManagerFunctions
     header('Content-Type: application/json');
     $response = array();
     $oldInstance = array();
-    if (isset($_POST['instanceId']) && isset($_POST['domain']) && isset($_POST['client'])) {
+    if (isset($_POST['instanceId']) && isset($_POST['domain'])) {
       $host = $this->databaseDetails['host'];
       $databaseName = $this->databaseDetails['db'];
       $user = $this->databaseDetails['username'];
@@ -274,11 +274,15 @@ class ManagerFunctions
       if (isset($_POST['name']) && $oldInstance['name'] != $_POST['name']) {
         $oldInstance['name'] = $_POST['name'];
       }
-      $moduleString = implode(",", $_POST['modules']);
+      if (isset($_POST['modules'])) {
+        $moduleString = implode(",", $_POST['modules']);
+      }
       if (isset($moduleString) && $oldInstance['modules'] != $moduleString) {
         $oldInstance['modules'] = $moduleString;
       }
-      $whitelistString = implode(",", $_POST['whitelisted']);
+      if (isset($_POST['whitelisted'])) {
+        $whitelistString = implode(",", $_POST['whitelisted']);
+      }
       if (isset($whitelistString) && $oldInstance['whitelisted_ip'] != $whitelistString) {
         $oldInstance['whitelisted_ip'] = $whitelistString;
       }
@@ -290,6 +294,8 @@ class ManagerFunctions
         if ($oldInstance['require_whitelist'] != $enabled) {
           $oldInstance['require_whitelist'] = $enabled;
         }
+      } else {
+        $oldInstance['require_whitelist'] = 0;
       }
       if (isset($_POST['enabled'])) {
         $enabled=0;
@@ -299,6 +305,8 @@ class ManagerFunctions
         if ($oldInstance['active'] != $enabled) {
           $oldInstance['active'] = $enabled;
         }
+      } else {
+        $oldInstance['active'] = 0;
       }
       if (isset($_POST['has_expiration_date'])) {
         $enabled=0;
@@ -308,7 +316,10 @@ class ManagerFunctions
         if ($oldInstance['will_expire'] != $enabled) {
           $oldInstance['will_expire'] = $enabled;
         }
+      } else {
+        $oldInstance['will_expire'] = 0;
       }
+
       if (isset($_POST['expiration_date']) && $oldInstance['expires_on'] != $_POST['expiration_date']) {
         $oldInstance['expires_on'] = $_POST['expiration_date'];
       }
@@ -317,83 +328,34 @@ class ManagerFunctions
       }
 
       $response['newInstance'] = $oldInstance;
-      echo(\json_encode($response));
+      $stmt = $db->prepare("UPDATE `instances` SET `name` = :name, `client_id` = :client_id, `auth_token` = :auth_token, `modules` = :modules, `active` = :active, `domain` = :domain, `require_whitelist` = :require_whitelist, `whitelisted_ip` = :whitelisted_ip, `will_expire` = :will_expire, `expires_on` = :expires_on WHERE `id` = :id ");
+      if ($stmt->execute(array(
+        'name' => $oldInstance['name'],
+        'client_id' => $oldInstance['client_id'],
+        'auth_token' => $oldInstance['auth_token'],
+        'modules' => $oldInstance['modules'],
+        'active' => $oldInstance['active'],
+        'domain' => $oldInstance['domain'],
+        'require_whitelist' => $oldInstance['require_whitelist'],
+        'whitelisted_ip' => $oldInstance['whitelisted_ip'],
+        'will_expire' => $oldInstance['will_expire'],
+        'expires_on' => $oldInstance['expires_on'],
+        'id' => $oldInstance['id']
+      ))) {
+        $response['error'] = 0;
+        $response['message'] = 'Succesfully updated instance';
+      } else {
+        $response['error'] = 1;
+        $response['message'] = 'Error while saving instance...';
+      }
     }
 
-  //     $instance = array(
-  //       'name' => $_POST['name'],
-  //       'domain' => $_POST['domain'],
-  //       'clientId' => $_POST['client'],
-  //       'authToken' => $token,
-  //       'active' => '0',
-  //       'modules' => '',
-  //       'requireWhitelist' => '',
-  //       'whitelisted' => '',
-  //       'hasExpirationDate' => '',
-  //       'expirationDate' => ''
-  //     );
-  //
-  //     if (isset($_POST['enabled'])) {
-  //       if (($_POST['enabled']) == "on") {
-  //         $instance['active'] = '1';
-  //       } else {
-  //         $instance['active'] = '0';
-  //       }
-  //     }
-  //
-  //     if (isset($_POST['modules'])) {
-  //       $moduleString = implode(",", $_POST['modules']);
-  //       $instance['modules'] = $moduleString;
-  //     }
-  //
-  //     if (isset($_POST['require_whitelist'])) {
-  //       if (($_POST['require_whitelist']) == "on") {
-  //         $instance['requireWhitelist'] = '1';
-  //       } else {
-  //         $instance['requireWhitelist'] = '0';
-  //       }
-  //     }
-  //
-  //     if (isset($_POST['whitelisted'])) {
-  //       $moduleString = implode(",", $_POST['whitelisted']);
-  //       $instance['whitelisted'] = $moduleString;
-  //     }
-  //
-  //     if (isset($_POST['has_expiration_date'])) {
-  //       if (($_POST['has_expiration_date']) == "on") {
-  //         $instance['hasExpirationDate'] = '1';
-  //         if (isset($_POST['expiration_date'])) {
-  //           if (($_POST['expiration_date']) != "") {
-  //             $timestamp = strtotime($_POST['expiration_date']);
-  //             $instance['expirationDate'] = date("Y-m-d H:i:s", $timestamp);
-  //           } else {
-  //             $instance['expirationDate'] = '';
-  //           }
-  //         }
-  //       } else {
-  //         $instance['hasExpirationDate'] = '0';
-  //       }
-  //     }
-  //
-  //
-  //     $db = new PDO("mysql:host={$host};dbname={$databaseName}", $user, $pass);
-  //     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-  //     $stmt = $db->prepare("INSERT INTO `instances` (`name`, `client_id`, `auth_token`, `modules`, `active`, `domain`, `require_whitelist`, `whitelisted_ip`, `will_expire`, `expires_on`) VALUES (:name, :clientId, :authToken, :modules, :active, :domain, :requireWhitelist, :whitelisted, :hasExpirationDate, :expirationDate)");
-  //     $stmt->execute($instance);
-  //
-  //     $response['error'] = 0;
-  //     $response['message'] = 'Succesfully created instance';
-  //     $response['instance'] = $instance;
-  //
-  //   }
-  //   else {
-  //     $response['error'] = 1;
-  //     $response['message'] = 'Not all fields are set!';
-  //     $response['instance'] = $instance;
-  //   }
-  //   echo(\json_encode($response));
+    else {
+      $response['error'] = 1;
+      $response['message'] = 'Not all fields are set!';
+    }
+    echo(\json_encode($response));
   }
-
 }
 
 
