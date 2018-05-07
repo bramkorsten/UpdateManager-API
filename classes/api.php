@@ -270,6 +270,10 @@ class Endpoint
               $managerExtention->createNewInstance();
               break;
 
+            case 'updateInstance':
+              $managerExtention->updateInstance();
+              break;
+
             case 'deleteInstance':
               $managerExtention->deleteInstance();
               break;
