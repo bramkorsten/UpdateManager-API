@@ -6,6 +6,7 @@ error_reporting(E_ALL);
 ini_set("display_errors", 1);
 
 use PDO;
+use DateTime;
 require_once('_db.php');
 use BramKorsten\MakeItLive\DatabaseDetails as DatabaseDetails;
 
@@ -72,7 +73,9 @@ class ManagerFunctions
         $result = $stmt->fetchAll(PDO::FETCH_OBJ);
       // $result = $db->query()->fetchAll(PDO::FETCH_OBJ);
       foreach ($result as $row) {
-        $response['results']['instances'][$i] = $row;
+        $rowData = (array)$row;
+        $response['results']['instances'][$i] = $rowData;
+        $response['results']['instances'][$i]['expires_on'] = date_format(date_create_from_format('Y-m-d H:i:s', $rowData['expires_on']), "m/d/Y");
         $i++;
       }
       header('Content-Type: application/json');
@@ -209,8 +212,7 @@ class ManagerFunctions
           $instance['hasExpirationDate'] = '1';
           if (isset($_POST['expiration_date'])) {
             if (($_POST['expiration_date']) != "") {
-              $timestamp = strtotime($_POST['expiration_date']);
-              $instance['expirationDate'] = date("Y-m-d H:i:s", $timestamp);
+              $instance['expirationDate'] = date_format(date_create_from_format('m/d/Y', $_POST['expiration_date']), 'Y-m-d H:i:s');
             } else {
               $instance['expirationDate'] = '';
             }
@@ -321,7 +323,7 @@ class ManagerFunctions
       }
 
       if (isset($_POST['expiration_date']) && $oldInstance['expires_on'] != $_POST['expiration_date']) {
-        $oldInstance['expires_on'] = $_POST['expiration_date'];
+        $oldInstance['expires_on'] = date_format(date_create_from_format('m/d/Y', $_POST['expiration_date']), 'Y-m-d H:i:s');
       }
       if (isset($_POST['domain']) && $oldInstance['domain'] != $_POST['domain']) {
         $oldInstance['domain'] = $_POST['domain'];
