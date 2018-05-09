@@ -271,7 +271,7 @@ class Endpoint
               break;
 
             case 'updateClient':
-              //$managerExtention->updateInstance();
+              $managerExtention->updateClient();
               break;
 
             case 'deleteClient':

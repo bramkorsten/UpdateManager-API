@@ -290,8 +290,7 @@ class ManagerFunctions
   }
 
 
-  public function updateInstance()
-  {
+  public function updateInstance() {
     header('Content-Type: application/json');
     $response = array();
     $oldInstance = array();
@@ -320,6 +319,8 @@ class ManagerFunctions
       } catch (\PDOException $e) {
         print "Error!: " . $e->getMessage() . "<br/>";
       }
+
+      $oldInstance['updated_at'] = date("Y-m-d H:i:s");
 
       if (isset($_POST['name']) && $oldInstance['name'] != $_POST['name']) {
         $oldInstance['name'] = $_POST['name'];
@@ -377,8 +378,7 @@ class ManagerFunctions
         $oldInstance['domain'] = $_POST['domain'];
       }
 
-      $response['newInstance'] = $oldInstance;
-      $stmt = $db->prepare("UPDATE `instances` SET `name` = :name, `client_id` = :client_id, `auth_token` = :auth_token, `modules` = :modules, `active` = :active, `domain` = :domain, `require_whitelist` = :require_whitelist, `whitelisted_ip` = :whitelisted_ip, `will_expire` = :will_expire, `expires_on` = :expires_on WHERE `id` = :id ");
+      $stmt = $db->prepare("UPDATE `instances` SET `name` = :name, `client_id` = :client_id, `auth_token` = :auth_token, `modules` = :modules, `active` = :active, `domain` = :domain, `require_whitelist` = :require_whitelist, `whitelisted_ip` = :whitelisted_ip, `will_expire` = :will_expire, `expires_on` = :expires_on, `updated_at` = :updated_at WHERE `id` = :id ");
       if ($stmt->execute(array(
         'name' => $oldInstance['name'],
         'client_id' => $oldInstance['client_id'],
@@ -390,13 +390,83 @@ class ManagerFunctions
         'whitelisted_ip' => $oldInstance['whitelisted_ip'],
         'will_expire' => $oldInstance['will_expire'],
         'expires_on' => $oldInstance['expires_on'],
-        'id' => $oldInstance['id']
+        'id' => $oldInstance['id'],
+        'updated_at' => $oldInstance['updated_at']
       ))) {
         $response['error'] = 0;
         $response['message'] = 'Succesfully updated instance';
+        $response['newInstance'] = $oldInstance;
       } else {
         $response['error'] = 1;
         $response['message'] = 'Error while saving instance...';
+        $response['newInstance'] = $oldInstance;
+      }
+    }
+
+    else {
+      $response['error'] = 1;
+      $response['message'] = 'Not all fields are set!';
+    }
+    echo(\json_encode($response));
+  }
+
+  public function updateClient() {
+    header('Content-Type: application/json');
+    $response = array();
+    $oldInstance = array();
+    if (isset($_POST['clientId']) && isset($_POST['name'])) {
+      $host = $this->databaseDetails['host'];
+      $databaseName = $this->databaseDetails['db'];
+      $user = $this->databaseDetails['username'];
+      $pass = $this->databaseDetails['password'];
+
+      $db = new PDO("mysql:host={$host};dbname={$databaseName}", $user, $pass);
+      $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+      try {
+        $stmt = $db->prepare("SELECT * FROM `clients` WHERE `id` = :id");
+        $stmt->execute(
+          [
+            'id' => $_POST['clientId']
+          ]);
+        $result = $stmt->fetchAll(PDO::FETCH_OBJ);
+        if (isset($result[0])) {
+          $client = (array)$result[0];
+          $response['oldClientDetails'] = $client;
+        } else {
+          $response['error'] = 1;
+          $response['message'] = "No client found with id: '". $_POST['clientId'] ."'";
+        }
+      } catch (\PDOException $e) {
+        print "Error!: " . $e->getMessage() . "<br/>";
+      }
+
+      $client['updated_at'] = date("Y-m-d H:i:s");
+      $client['name'] = $_POST['name'];
+      if (isset($_POST['description'])) {
+        $client['description'] = $_POST['description'];
+      }
+      if (isset($_POST['enabled'])) {
+        $client['active'] = 1;
+      }
+      else {
+        $client['active'] = 0;
+      }
+
+      $stmt = $db->prepare("UPDATE `clients` SET `name` = :name, `description` = :description, `active` = :active, `updated_at` = :updated_at WHERE `id` = :id ");
+      if ($stmt->execute(array(
+        'name' => $client['name'],
+        'description' => $client['description'],
+        'active' => $client['active'],
+        'updated_at' => $client['updated_at'],
+        'id' => $client['id']
+      ))) {
+        $response['error'] = 0;
+        $response['message'] = 'Succesfully updated client';
+        $response['newClientDetails'] = $client;
+      } else {
+        $response['error'] = 1;
+        $response['message'] = 'Error while saving client...';
+        $response['newClientDetails'] = $client;
       }
     }
 
