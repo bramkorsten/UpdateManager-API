@@ -24,9 +24,7 @@ class ManagerFunctions
     $this->databaseDetails = $databaseData;
   }
 
-
-  public function getClients()
-  {
+  public function getClients() {
     $host = $this->databaseDetails['host'];
     $db = $this->databaseDetails['db'];
     $user = $this->databaseDetails['username'];
@@ -53,8 +51,7 @@ class ManagerFunctions
 
   }
 
-  public function getInstancesForClient($id)
-  {
+  public function getInstancesForClient($id) {
     $host = $this->databaseDetails['host'];
     $db = $this->databaseDetails['db'];
     $user = $this->databaseDetails['username'];
@@ -89,42 +86,105 @@ class ManagerFunctions
 
   }
 
+  public function deleteInstance() {
+    if (isset($_POST['instanceId'])) {
+      $host = $this->databaseDetails['host'];
+      $db = $this->databaseDetails['db'];
+      $user = $this->databaseDetails['username'];
+      $pass = $this->databaseDetails['password'];
 
-  public function deleteInstance()
-  {
-    $host = $this->databaseDetails['host'];
-    $db = $this->databaseDetails['db'];
-    $user = $this->databaseDetails['username'];
-    $pass = $this->databaseDetails['password'];
-
-    $db = new PDO("mysql:host={$host};dbname={$db}", $user, $pass);
-    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    try {
-      $response = array();
-      $stmt = $db->prepare("DELETE FROM `instances` WHERE `id` = :instanceId");
-      if($stmt->execute(array('instanceId' => $_POST['instanceId']))) {
-        $response['error'] = 0;
-        $response['message'] = 'Instance deleted';
-      } else {
+      $db = new PDO("mysql:host={$host};dbname={$db}", $user, $pass);
+      $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+      try {
+        $response = array();
+        $stmt = $db->prepare("DELETE FROM `instances` WHERE `id` = :instanceId");
+        if($stmt->execute(array('instanceId' => $_POST['instanceId']))) {
+          $response['error'] = 0;
+          $response['message'] = 'Instance deleted';
+        } else {
+          $response['error'] = 1;
+          $response['message'] = 'Something went wrong while deleting an instance';
+        }
+        header('Content-Type: application/json');
+        echo(json_encode($response, true));
+        die();
+      } catch (\PDOException $e) {
         $response['error'] = 1;
-        $response['message'] = 'Something went wrong while deleting an instance';
+        $response['message'] = 'PDO Exeption: ' . $e->getMessage();
+        header('Content-Type: application/json');
+        echo(json_encode($response, true));
       }
-      header('Content-Type: application/json');
-      echo(json_encode($response, true));
-      die();
-    } catch (\PDOException $e) {
+    } else {
+      $response = array();
       $response['error'] = 1;
-      $response['message'] = 'PDO Exeption: ' . $e->getMessage();
+      $response['message'] = "No instance ID specified...";
       header('Content-Type: application/json');
       echo(json_encode($response, true));
     }
-
     die();
-
   }
 
-  public function getModules()
-  {
+  public function deleteClient() {
+    if (isset($_POST['clientId'])) {
+      $host = $this->databaseDetails['host'];
+      $db = $this->databaseDetails['db'];
+      $user = $this->databaseDetails['username'];
+      $pass = $this->databaseDetails['password'];
+
+      $response = array();
+      $db = new PDO("mysql:host={$host};dbname={$db}", $user, $pass);
+      $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+      try {
+        $stmt = $db->prepare("DELETE FROM `instances` WHERE `client_id` = :clientId");
+        if($stmt->execute(array('clientId' => $_POST['clientId']))) {
+          $response['error'] = 0;
+          $response['messages'][0] = 'Instances deleted succesfully';
+        } else {
+          $response['error'] = 1;
+          $response['messages'][0] = 'Something went wrong while deleting instances of the client';
+          header('Content-Type: application/json');
+          echo(json_encode($response, true));
+          die();
+        }
+      } catch (\PDOException $e) {
+        $response['error'] = 1;
+        $response['message'] = 'PDO Exeption: ' . $e->getMessage();
+        header('Content-Type: application/json');
+        echo(json_encode($response, true));
+      }
+      try {
+        $stmt = $db->prepare("DELETE FROM `clients` WHERE `id` = :clientId");
+        if($stmt->execute(array('clientId' => $_POST['clientId']))) {
+          $response['error'] = 0;
+          $response['messages'][1] = 'Client deleted successfully';
+        } else {
+          $response['error'] = 1;
+          $response['messages'][1] = 'Something went wrong while deleting the client';
+          header('Content-Type: application/json');
+          echo(json_encode($response, true));
+          die();
+        }
+      } catch (\PDOException $e) {
+        $response['error'] = 1;
+        $response['message'] = 'PDO Exeption: ' . $e->getMessage();
+        header('Content-Type: application/json');
+        echo(json_encode($response, true));
+      }
+
+      header('Content-Type: application/json');
+      echo(json_encode($response, true));
+
+    } else {
+      $response = array();
+      $response['error'] = 1;
+      $response['message'] = "No instance ID specified...";
+      header('Content-Type: application/json');
+      echo(json_encode($response, true));
+    }
+    die();
+  }
+
+  public function getModules() {
     $host = $this->databaseDetails['host'];
     $databaseName = $this->databaseDetails['db'];
     $user = $this->databaseDetails['username'];
@@ -151,9 +211,7 @@ class ManagerFunctions
 
   }
 
-
-  public function createNewInstance()
-  {
+  public function createNewInstance() {
     header('Content-Type: application/json');
     $response = array();
     if (isset($_POST['name']) && isset($_POST['name']) && isset($_POST['domain'])) {
@@ -229,7 +287,7 @@ class ManagerFunctions
       $stmt->execute($instance);
 
       $response['error'] = 0;
-      $response['message'] = 'Succesfully created instance';
+      $response['message'] = 'successfully created instance';
       $response['instance'] = $instance;
 
     }
@@ -241,9 +299,7 @@ class ManagerFunctions
     echo(\json_encode($response));
   }
 
-
-  public function createClient()
-  {
+  public function createClient() {
     header('Content-Type: application/json');
     $response = array();
     if (isset($_POST['name'])) {
@@ -277,7 +333,7 @@ class ManagerFunctions
       $stmt->execute($client);
 
       $response['error'] = 0;
-      $response['message'] = 'Succesfully created client';
+      $response['message'] = 'successfully created client';
       $response['client'] = $client;
 
     }
@@ -288,7 +344,6 @@ class ManagerFunctions
     }
     echo(\json_encode($response));
   }
-
 
   public function updateInstance() {
     header('Content-Type: application/json');
@@ -394,7 +449,7 @@ class ManagerFunctions
         'updated_at' => $oldInstance['updated_at']
       ))) {
         $response['error'] = 0;
-        $response['message'] = 'Succesfully updated instance';
+        $response['message'] = 'successfully updated instance';
         $response['newInstance'] = $oldInstance;
       } else {
         $response['error'] = 1;
@@ -461,7 +516,7 @@ class ManagerFunctions
         'id' => $client['id']
       ))) {
         $response['error'] = 0;
-        $response['message'] = 'Succesfully updated client';
+        $response['message'] = 'successfully updated client';
         $response['newClientDetails'] = $client;
       } else {
         $response['error'] = 1;
