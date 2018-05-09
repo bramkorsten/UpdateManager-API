@@ -154,7 +154,7 @@ class ManagerFunctions
 
   public function createNewInstance()
   {
-    //header('Content-Type: application/json');
+    header('Content-Type: application/json');
     $response = array();
     if (isset($_POST['name']) && isset($_POST['name']) && isset($_POST['domain'])) {
 
@@ -210,9 +210,9 @@ class ManagerFunctions
       if (isset($_POST['has_expiration_date'])) {
         if (($_POST['has_expiration_date']) == "on") {
           $instance['hasExpirationDate'] = '1';
-          if (isset($_POST['expiration_date'])) {
-            if (($_POST['expiration_date']) != "") {
-              $instance['expirationDate'] = date_format(date_create_from_format('m/d/Y', $_POST['expiration_date']), 'Y-m-d H:i:s');
+          if (isset($_POST['new_expiration_date'])) {
+            if (($_POST['new_expiration_date']) != "") {
+              $instance['expirationDate'] = date_format(date_create_from_format('m/d/Y', $_POST['new_expiration_date']), 'Y-m-d H:i:s');
             } else {
               $instance['expirationDate'] = '';
             }
@@ -237,6 +237,54 @@ class ManagerFunctions
       $response['error'] = 1;
       $response['message'] = 'Not all fields are set!';
       $response['instance'] = $instance;
+    }
+    echo(\json_encode($response));
+  }
+
+
+  public function createClient()
+  {
+    header('Content-Type: application/json');
+    $response = array();
+    if (isset($_POST['name'])) {
+
+      $host = $this->databaseDetails['host'];
+      $databaseName = $this->databaseDetails['db'];
+      $user = $this->databaseDetails['username'];
+      $pass = $this->databaseDetails['password'];
+
+      $client = array(
+        'name' => $_POST['name'],
+        'description' => '',
+        'active' => ''
+      );
+
+      if (isset($_POST['enabled'])) {
+        if (($_POST['enabled']) == "on") {
+          $client['active'] = '1';
+        } else {
+          $client['active'] = '0';
+        }
+      }
+
+      if (isset($_POST['description'])) {
+        $client['description'] = $_POST['description'];
+      }
+
+      $db = new PDO("mysql:host={$host};dbname={$databaseName}", $user, $pass);
+      $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+      $stmt = $db->prepare("INSERT INTO `clients` (`name`, `description`, `active`) VALUES (:name, :description, :active)");
+      $stmt->execute($client);
+
+      $response['error'] = 0;
+      $response['message'] = 'Succesfully created client';
+      $response['client'] = $client;
+
+    }
+    else {
+      $response['error'] = 1;
+      $response['message'] = 'Not all fields are set!';
+      $response['client'] = $client;
     }
     echo(\json_encode($response));
   }

@@ -266,6 +266,18 @@ class Endpoint
               $managerExtention->getModules();
               break;
 
+            case 'newClient':
+              $managerExtention->createClient();
+              break;
+
+            case 'updateClient':
+              //$managerExtention->updateInstance();
+              break;
+
+            case 'deleteClient':
+              //$managerExtention->deleteInstance();
+              break;
+
             case 'newInstance':
               $managerExtention->createNewInstance();
               break;
