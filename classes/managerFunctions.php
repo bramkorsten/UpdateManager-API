@@ -531,6 +531,72 @@ class ManagerFunctions
     }
     echo(\json_encode($response));
   }
+
+  public function updateModule() {
+    header('Content-Type: application/json');
+    $response = array();
+    $oldInstance = array();
+    if (isset($_POST['moduleId']) && isset($_POST['name']) && isset($_POST['repo_url']) && isset($_POST['secret']) && isset($_POST['token'])) {
+      $host = $this->databaseDetails['host'];
+      $databaseName = $this->databaseDetails['db'];
+      $user = $this->databaseDetails['username'];
+      $pass = $this->databaseDetails['password'];
+
+      $db = new PDO("mysql:host={$host};dbname={$databaseName}", $user, $pass);
+      $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+      try {
+        $stmt = $db->prepare("SELECT * FROM `modules` WHERE `id` = :id");
+        $stmt->execute(
+          [
+            'id' => $_POST['moduleId']
+          ]);
+        $result = $stmt->fetchAll(PDO::FETCH_OBJ);
+        if (isset($result[0])) {
+          $oldModule = (array)$result[0];
+          $response['oldModule'] = $oldModule;
+        } else {
+          $response['error'] = 1;
+          $response['message'] = "No module found with id: '". $_POST['moduleId'] ."'";
+        }
+      } catch (\PDOException $e) {
+        print "Error!: " . $e->getMessage() . "<br/>";
+      }
+
+      $newModule['updated_at'] = date("Y-m-d H:i:s");
+      $newModule['name'] = $_POST['name'];
+      $newModule['repo_url'] = $_POST['repo_url'];
+      $newModule['webhook_secret'] = $_POST['secret'];
+      $newModule['token'] = $_POST['token'];
+      $newModule['listening'] = 0;
+      $newModule['active'] = 0;
+      $newModule['id'] = $_POST['moduleId'];
+
+      if (isset($_POST['active'])) {
+        $newModule['listening'] = 1;
+      }
+      if (isset($_POST['downloadable'])) {
+        $newModule['active'] = 1;
+      }
+
+      $stmt = $db->prepare("UPDATE `modules` SET `name` = :name, `repo_url` = :repo_url, `webhook_secret` = :webhook_secret, `token` = :token, `listening` = :listening, `visible` = :active, `updated_at` = :updated_at WHERE `id` = :id ");
+      if ($stmt->execute($newModule)) {
+        $response['error'] = 0;
+        $response['message'] = 'successfully updated module';
+        $response['newModule'] = $newModule;
+      } else {
+        $response['error'] = 1;
+        $response['message'] = 'Error while saving module...';
+        $response['newModule'] = $newModule;
+      }
+    }
+
+    else {
+      $response['error'] = 1;
+      $response['message'] = 'Not all fields are set!';
+    }
+    echo(\json_encode($response));
+  }
+
 }
 
 
