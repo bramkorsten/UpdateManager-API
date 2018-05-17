@@ -2,6 +2,8 @@ RewriteEngine on
 RewriteBase /api/
 DirectoryIndex index.php
 
+RewriteRule .* - [e=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ classes/api.php?uri=$1 [QSA]

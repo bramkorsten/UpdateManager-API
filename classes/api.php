@@ -151,6 +151,133 @@ class Endpoint
   }
 
 
+  public function getInstanceInformation()
+  {
+
+    if (!isset($_POST['Authorization'])) {
+      $this->response['error'] = '401 Not Authorized';
+      $this->response['message'] = "You are not authorized to visit this endpoint. Please provide Authentication...";
+      $this->dieWithResponse();
+    }
+    $token = $_POST['Authorization'];
+    $token = $this->cleanInput($token);
+    $instance = array();
+    $modulesForInstance = array();
+    $this->con = new Connection();
+    $db = $this->con->connect($this->databaseData);
+    try {
+      $result = $db->query("SELECT * from instances WHERE `auth_token` = '{$token}'")->fetchAll(PDO::FETCH_OBJ);
+      if (!$result) {
+        $this->response['error'] = '404 Not Found';
+        $this->response['message'] = "The Application token provided is not registered on the server. Please make sure it is valid.";
+        $this->dieWithResponse();
+      } else {
+        $i = 0;
+        $rows = array();
+        foreach ($result as $row) {
+          $rows[$i] = (array)$row;
+          $i++;
+        }
+        if ($i > 1) {
+          $this->response['error'] = '500 Multiple Instances with unique ID';
+          $this->response['message'] = "The application key you've provided is not unique, but should be. For safety reasons, please contact the developer";
+          $this->response['result'] = $rows;
+          $this->dieWithResponse();
+        }
+        $instance = $rows[0];
+        $allModules = array();
+        $result = $db->query("SELECT * FROM `modules`")->fetchAll(PDO::FETCH_OBJ);
+        $i = 0;
+        foreach ($result as $row) {
+          $allModules[$i] = (array)$row;
+          $i++;
+        }
+        $installableModules = explode(",", $instance['modules']);
+        $i = 0;
+        foreach($installableModules as $moduleId) {
+          $foundIndex = array_search($moduleId, array_column($allModules, 'id'));
+          if ($foundIndex === false) {
+            $modulesForInstance[$i] = "false";
+            $i++;
+          }
+          else {
+            $modulesForInstance[$i]['id'] = $allModules[$foundIndex]['id'];
+            $modulesForInstance[$i]['name'] = $allModules[$foundIndex]['name'];
+            $modulesForInstance[$i]['description'] = $allModules[$foundIndex]['description'];
+            $modulesForInstance[$i]['visible'] = $allModules[$foundIndex]['visible'];
+            $modulesForInstance[$i]['deprecated'] = $allModules[$foundIndex]['deprecated'];
+            $i++;
+          }
+        }
+        //print_r($modulesForInstance);
+        $i = 0;
+        foreach ($modulesForInstance as $module) {
+          if ($module != "false") {
+            $id = $module['id'];
+            try {
+              $result = $db->query("SELECT * from module_versions WHERE `module_id` = '$id' ORDER BY release_date DESC")->fetchAll(PDO::FETCH_OBJ);
+              if (!$result) {
+                $modulesForInstance[$i]['versions'] = "false";
+              } else {
+                foreach($result as $index => $row) {
+                  $row = (array)$row;
+                  if ($row['public']) {
+                    if($row['release_type'] <= $instance['release_type']) {
+                      $modulesForInstance[$i]['versions'][$index] = $row;
+                    }
+                  }
+                }
+                $modulesForInstance[$i]['versions'] = array_slice($modulesForInstance[$i]['versions'], 0, 3);
+                $i++;
+              }
+            }
+
+            catch (\Exception $e) {
+              $this->response['error'] = 'request_error';
+              $this->response['message'] = 'Something went wrong while fetching entries -> ' . $e;
+              $this->dieWithResponse();
+            }
+          }
+        }
+      }
+    } catch (\Exception $e) {
+      $this->response['error'] = '500 Server Error';
+      $this->response['message'] = $e;
+      $this->dieWithResponse();
+    }
+
+    $instance['modules'] = $modulesForInstance;
+    $coreVersions = array();
+    try {
+      $result = $db->query("SELECT * from core_versions ORDER BY release_date DESC")->fetchAll(PDO::FETCH_OBJ);
+      if (!$result) {
+        $coreVersions = "false";
+      } else {
+        foreach($result as $index => $row) {
+          $row = (array)$row;
+          if ($row['public']) {
+            if($row['release_type'] <= $instance['release_type']) {
+              $coreVersions[$index] = $row;
+            }
+          }
+        }
+        $coreVersions = array_slice($coreVersions, 0, 3);
+        $instance['core_versions'] = $coreVersions;
+      }
+    }
+
+    catch (\Exception $e) {
+      $this->response['error'] = 'request_error';
+      $this->response['message'] = 'Something went wrong while fetching entries -> ' . $e;
+      $this->dieWithResponse();
+    }
+    $this->response['error'] = 'false';
+    $this->response['instance'] = $instance;
+    $this->dieWithResponse();
+    // print_r($instance);
+  }
+
+
   /**
    * Get's the last 10 module versions using the 3rd endpointURL param.
    * @param  string $module sanitized modulename from URL
@@ -436,6 +563,10 @@ class Endpoint
         $this->runManagerFunctions();
         break;
 
+      case 'instances':
+        $this->getInstanceInformation();
+        break;
+
       case 'webhook':
         $this->runWebhook();
         break;
@@ -448,8 +579,22 @@ class Endpoint
     }
   }
 
+}
 
-
+if (!function_exists('getallheaders'))
+{
+    function getallheaders()
+    {
+           $headers = [];
+       foreach ($_SERVER as $name => $value)
+       {
+           if (substr($name, 0, 5) == 'HTTP_')
+           {
+               $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
+           }
+       }
+       return $headers;
+    }
 }
 
 
