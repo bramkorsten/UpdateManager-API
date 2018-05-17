@@ -124,6 +124,44 @@ class ManagerFunctions
     die();
   }
 
+  public function deleteModule() {
+    if (isset($_POST['moduleId'])) {
+      $host = $this->databaseDetails['host'];
+      $db = $this->databaseDetails['db'];
+      $user = $this->databaseDetails['username'];
+      $pass = $this->databaseDetails['password'];
+
+      $db = new PDO("mysql:host={$host};dbname={$db}", $user, $pass);
+      $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+      try {
+        $response = array();
+        $stmt = $db->prepare("DELETE FROM `modules` WHERE `id` = :moduleId");
+        if($stmt->execute(array('moduleId' => $_POST['moduleId']))) {
+          $response['error'] = 0;
+          $response['message'] = 'Module deleted';
+        } else {
+          $response['error'] = 1;
+          $response['message'] = 'Something went wrong while deleting a module';
+        }
+        header('Content-Type: application/json');
+        echo(json_encode($response, true));
+        die();
+      } catch (\PDOException $e) {
+        $response['error'] = 1;
+        $response['message'] = 'PDO Exeption: ' . $e->getMessage();
+        header('Content-Type: application/json');
+        echo(json_encode($response, true));
+      }
+    } else {
+      $response = array();
+      $response['error'] = 1;
+      $response['message'] = "No module ID specified...";
+      header('Content-Type: application/json');
+      echo(json_encode($response, true));
+    }
+    die();
+  }
+
   public function deleteClient() {
     if (isset($_POST['clientId'])) {
       $host = $this->databaseDetails['host'];
@@ -528,6 +566,58 @@ class ManagerFunctions
     else {
       $response['error'] = 1;
       $response['message'] = 'Not all fields are set!';
+    }
+    echo(\json_encode($response));
+  }
+
+  public function createModule() {
+    header('Content-Type: application/json');
+    $response = array();
+    if (isset($_POST['name']) && isset($_POST['repo_url']) && isset($_POST['secret']) && isset($_POST['token'])) {
+
+      $host = $this->databaseDetails['host'];
+      $databaseName = $this->databaseDetails['db'];
+      $user = $this->databaseDetails['username'];
+      $pass = $this->databaseDetails['password'];
+
+      $module = array(
+        'name' => $_POST['name'],
+        'repo_url' => $_POST['repo_url'],
+        'description' => '',
+        'visible' => 0,
+        'listening' => 0,
+        'webhook_secret' => $_POST['secret'],
+        'token' => $_POST['token'],
+        'min_core_version' => '1.0.0',
+      );
+
+      if (isset($_POST['description'])) {
+        $module['description'] = $_POST['description'];
+      }
+
+      if (isset($_POST['active'])) {
+        $module['listening'] = 1;
+      }
+
+      if (isset($_POST['downloadable'])) {
+        $module['visible'] = 1;
+      }
+
+      $db = new PDO("mysql:host={$host};dbname={$databaseName}", $user, $pass);
+      $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+      $stmt = $db->prepare("INSERT INTO `modules` (`name`, `repo_url`, `description`, `visible`, `listening`, `webhook_secret`, `token`, `min_core_version`)
+                                            VALUES (:name, :repo_url, :description, :visible, :listening, :webhook_secret, :token, :min_core_version)");
+      $stmt->execute($module);
+
+      $response['error'] = 0;
+      $response['message'] = 'successfully created module';
+      $response['module'] = $module;
+
+    }
+    else {
+      $response['error'] = 1;
+      $response['message'] = 'Not all fields are set!';
+      $response['module'] = $module;
     }
     echo(\json_encode($response));
   }
