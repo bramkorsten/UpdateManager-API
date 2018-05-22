@@ -151,6 +151,44 @@ class Endpoint
   }
 
 
+  public function setInstanceSetting()
+  {
+    if (!isset($_POST['Authorization']) || !isset($_POST['setting']) || !isset($_POST['value'])) {
+      $this->response['error'] = 'Invalid request';
+      $this->response['message'] = "Not all required fields are set correctly";
+      $this->dieWithResponse();
+    }
+    $token = $_POST['Authorization'];
+    $token = $this->cleanInput($token);
+    $setting = $this->cleanInput($_POST['setting']);
+
+    $this->con = new Connection();
+    $db = $this->con->connect($this->databaseData);
+    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    try {
+      $result = $db->query("SELECT * from instances WHERE `auth_token` = '{$token}'")->fetchAll(PDO::FETCH_OBJ);
+      if (!$result) {
+        $this->response['error'] = '401 Not Authorized';
+        $this->response['message'] = "The Application token provided is not registered on the server. Please make sure it is valid.";
+        $this->dieWithResponse();
+      } else {
+        $stmt = $db->prepare("UPDATE `instances` SET {$setting} = :value WHERE `auth_token` = :token");
+        $stmt->execute(array(
+          'value' => $this->cleanInput($_POST['value']),
+          'token' => $token
+        ));
+      }
+      $this->response['error'] = false;
+      $this->response['message'] = "200 OK! Setting Changed";
+      $this->dieWithResponse();
+    } catch (\Exception $e) {
+      $this->response['error'] = '500 Server Error';
+      $this->response['message'] = $e;
+      $this->dieWithResponse();
+    }
+  }
+
+
   public function getInstanceInformation()
   {
 
@@ -563,8 +601,12 @@ class Endpoint
         $this->runManagerFunctions();
         break;
 
-      case 'instances':
+      case 'instance':
         $this->getInstanceInformation();
+        break;
+
+      case 'setinstance':
+        $this->setInstanceSetting();
         break;
 
       case 'webhook':
@@ -579,22 +621,6 @@ class Endpoint
     }
   }
 
-}
-
-if (!function_exists('getallheaders'))
-{
-    function getallheaders()
-    {
-           $headers = [];
-       foreach ($_SERVER as $name => $value)
-       {
-           if (substr($name, 0, 5) == 'HTTP_')
-           {
-               $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
-           }
-       }
-       return $headers;
-    }
 }
 
 
