@@ -64,7 +64,7 @@ class VersionManager
     \fclose($newVersionFile);
 
     $this->packageName = $name;
-    $this->packageVersion = substr($version, 1);;
+    $this->packageVersion = substr($version, 1);
 
     if ($this->makePackage($downloadPath, $fileName)) {
       $this->registerPackage($this->packageName, $this->packageVersion, $this->packagePath);
