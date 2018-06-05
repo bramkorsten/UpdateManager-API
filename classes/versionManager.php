@@ -15,7 +15,8 @@ error_reporting(E_ALL);
 ini_set("display_errors", 1);
 
 /**
- * VersionManager for MakeItLive
+ * deprecated: This class is replaced with packageManager.php
+ * Old VersionManager for MakeItLive
  */
 class VersionManager
 {

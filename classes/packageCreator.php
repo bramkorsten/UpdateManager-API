@@ -22,6 +22,8 @@ class packageCreator
 
   protected $coreRepoName = "cms-test"; // This repo will create new core packages instead of module packages
 
+  protected $updaterRepoName = "packageupdater"; // This repo will create new packages of the updater
+
   protected $databaseDetails;
 
   protected $downloadPath = "../temp/archives/"; // Where to save the downloaded packages
@@ -80,8 +82,6 @@ class packageCreator
 
           $this->createNewPackage($name, $version, $url, $releaseType);
         }
-        // $versionManager = new VersionManager();
-        // $versionManager->getNewVersion($url, $name, $version);
       }
 
     } else {
@@ -99,11 +99,18 @@ class packageCreator
       if ($packagePath = $this->makePackage($releasePath, "makeitlive-core", $version, "core")) {
         $this->registerCorePackageVersion($version, $packagePath, $releaseType);
       }
+    } else if ($name == $this->updaterRepoName) {
+      $releasePath = $this->getRelease($url, $name, $version);
+
+      $packagePath = "";
+      if ($packagePath = $this->makePackage($releasePath, $name, $version, "updater")) {
+        $this->registerUpdaterPackageVersion($version, $packagePath, $releaseType);
+      }
     } else {
       $releasePath = $this->getRelease($url, $name, $version);
 
       $packagePath = "";
-      if ($packagePath = $this->makePackage($releasePath, $name, $version, "modules/{$name}")) {
+      if ($packagePath = $this->makePackage($releasePath, $name, $version, "modules")) {
         $this->registerModulePackageVersion($name, $version, $packagePath, $releaseType);
       }
     }
@@ -181,7 +188,11 @@ class packageCreator
 
         $package = new ZipArchive();
         $packageLocation = "{$this->publicDownloadLocation}/{$subDir}/{$releaseName}-{$version}.upgrade.zip";
-
+        if (!\file_exists("{$this->publicDownloadLocation}/{$subDir}")) {
+          mkdir("{$this->publicDownloadLocation}/{$subDir}", 0660, true);
+          chmod("{$this->publicDownloadLocation}/{$subDir}",0774);
+        }
+        echo($packageLocation);
         $package->open($packageLocation, ZipArchive::CREATE | ZipArchive::OVERWRITE);
 
         // Create recursive directory iterator
@@ -215,6 +226,20 @@ class packageCreator
     else {
       return false;
     }
+  }
+
+  public function registerUpdaterPackageVersion($version, $url, $releaseType)
+  {
+    $db = new PDO("mysql:host={$this->databaseDetails['host']};dbname={$this->databaseDetails['db']}", $this->databaseDetails['username'], $this->databaseDetails['password']);
+    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $stmt = $db->prepare("INSERT INTO `updater_versions` (`version`, `release_type`, `release_date`, `public`, `link`, `changelog_link`) VALUES (:version, :releasetype, CURRENT_TIMESTAMP, :public, :link, '')");
+    $stmt->execute(
+      [
+        'version' => $version,
+        'releasetype' => $releaseType,
+        'public' => '1',
+        'link' => $url
+      ]);
   }
 
   public function registerCorePackageVersion($version, $url, $releaseType)
