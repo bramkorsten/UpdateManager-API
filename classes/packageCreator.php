@@ -36,7 +36,7 @@ class packageCreator
 
   protected $publicDownloadLocation = "../downloads";
 
-  protected $secret = '#&B)r|UGUv8swtL+J&Ird(v3}$fKOh'; // Use this secret on every webhook of all repositories
+  protected $secret = 'secrettoken'; // Use this secret on every webhook of all repositories
 
   function __construct()
   {
@@ -126,7 +126,7 @@ class packageCreator
     $fileName = "gh-{$name}-{$version}-{$now}.zip";
 
     $header = array();
-    $header[] = 'Authorization: token 2e24043bf4fb7875279c69d29e03d801ed9c9dab';
+    $header[] = 'Authorization: token {token for github}'
     $newVersionFile = fopen($downloadPath . $fileName, 'w');
     $options = array(
       CURLOPT_USERAGENT => "app",
