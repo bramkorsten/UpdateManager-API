@@ -43,7 +43,7 @@ class VersionManager
     $downloadPath = "../temp/archives/";
     $fileName = "gh-{$name}-{$version}-{$now}.zip";
     $header = array();
-    $header[] = 'Authorization: token 2e24043bf4fb7875279c69d29e03d801ed9c9dab';
+    $header[] = 'Authorization: token {github token}';
     $newVersionFile = fopen($downloadPath . $fileName, 'w');
     $options = array(
       CURLOPT_USERAGENT => "app",
